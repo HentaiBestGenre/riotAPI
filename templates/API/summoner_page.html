@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+{#    <link rel="icon" type="image/x-icon" href="{% static 'imgs/icon.ico' %}">#}
+    <title>RiotAPI progect</title>
+    <style>
+        .last_game_container a{
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+<h1>{{ user_data.s_name }}</h1>
+
+<div class="rank-container">
+    <div class="rank_img"></div>
+    <div class="stat">
+        <div class="lp">{{ rank.rank }} {{ rank.lp }}</div>
+        <div class="winrate">{{ rank.winRate }}</div>
+    </div>
+</div>
+<div class="last_games">
+    {% for game in games_data.games_data %}
+    <div class="last_game_container">
+        <a href={% url 'API:match' match_id=game.game_id %}>
+            <div class="hero_icon">
+                <img src="{{ game.champ_data.champ_icon_url }}" alt="none">
+            </div>
+            <div class="stat">
+                <p style="font-size: 14px">{{ game.scor.kills }}/{{ game.scor.assists }}/{{ game.scor.deaths }}</p>
+    {#            <p style="font-size: 10px">КДА: {{ game.scor.kda }}</p>#}
+            </div>
+            <div class="items">
+                {% for item in game.items %}
+                    <img src="{{ item }}" onerror="this.style.display='none'">
+                {% endfor %}
+            </div>
+            <div class = 'summoners'>
+                <p>{{ game.summoner_spals.1 }}</p>
+                <p>{{ game.summoner_spals.2 }}</p>
+            </div>
+            <div>
+                <p>{{ game.gameStartTimestamp }}</p>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+    <input type="hidden" value="10" name="games_number">
+</div>
+</body>
+</html>

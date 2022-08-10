@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+</head>
+<body>
+<form method="POST" action={% url 'API:index' %}>
+    {% csrf_token %}
+    <label>Summoner: <input type="text" name="summoner_name"></label>
+    <label>
+        Region:
+        <select name="region">
+            <option selected>ru</option>
+            <option>br1</option>
+            <option>eun1</option>
+            <option>euw1</option>
+{#            <option>jp1</option>#}
+{#            <option>kr</option>#}
+{#            <option>la1</option>#}
+{#            <option>la2</option>#}
+{#            <option>na1</option>#}
+{#            <option>oc1</option>#}
+{#            <option>tr1</option>#}
+        </select>
+    </label>
+    <button type="submit">Search</button>
+</form>
+{#<a href={% url 'API:match' match_id='RU_402892301' %}>Match: RU_402892301</a>#}
+{##}
+{##}
+{#<img src="http://ddragon.leagueoflegends.com/cdn/12.14.1/img/item/1001.png" alt="none">#}
+</body>
+</html>
