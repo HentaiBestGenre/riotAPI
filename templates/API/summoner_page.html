@@ -22,15 +22,15 @@
     </div>
 </div>
 <div class="last_games">
-    {% for game in games_data.games_data %}
+    {% for game in games_data %}
     <div class="last_game_container">
-        <a href={% url 'API:match' match_id=game.game_id %}>
+        <a href={% url 'API:match' match_id=game.match_id %}>
             <div class="hero_icon">
                 <img src="{{ game.champ_data.champ_icon_url }}" alt="none">
             </div>
             <div class="stat">
-                <p style="font-size: 14px">{{ game.scor.kills }}/{{ game.scor.assists }}/{{ game.scor.deaths }}</p>
-    {#            <p style="font-size: 10px">КДА: {{ game.scor.kda }}</p>#}
+                <p style="font-size: 14px">{{ game.scor.kills }}/{{ game.scor.deaths }}/{{ game.scor.assists }}</p>
+                <p style="font-size: 10px">КДА: {{ game.scor.kda }}</p>
             </div>
             <div class="items">
                 {% for item in game.items %}
@@ -40,9 +40,6 @@
             <div class = 'summoners'>
                 <p>{{ game.summoner_spals.1 }}</p>
                 <p>{{ game.summoner_spals.2 }}</p>
-            </div>
-            <div>
-                <p>{{ game.gameStartTimestamp }}</p>
             </div>
         </a>
     </div>

@@ -1,7 +1,4 @@
-import asyncio
-import httpx
 import requests
-import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +6,8 @@ from .RiotAPI.RiotConfig import config
 from .RiotAPI import RiotAPI
 # from RiotAPI.RiotConfig import config
 # from RiotAPI import RiotAPI
-import time
+import time, base64
+from io import BytesIO
 
 
 class GameAnalytics(RiotAPI):
@@ -29,14 +27,15 @@ class GameAnalytics(RiotAPI):
 		self.game_duration = self.last_frame['timestamp'] / 60000  # in min
 
 	def summoners_stat(self):
-		clean_summs_stat = [
-			{
+		clean_summs_stat = []
+		for user_game_data in self.match_info['info']['participants']:
+			clean_data = {
+				'hero_name': user_game_data["championName"],
 				'match_id': self.match_id,
 				'scor': {
 					'kills': user_game_data['kills'],
 					'assists': user_game_data['assists'],
 					'deaths': user_game_data['deaths'],
-					# 'kda': '{0:.2f}'.format((int(user_game_data["assists"]) + int(user_game_data["kills"])) / int(user_game_data["deaths"]))
 				},
 				'champ_data': {
 					'participantId': user_game_data['participantId'],
@@ -57,9 +56,73 @@ class GameAnalytics(RiotAPI):
 					'2': f'{self.summoners_skils[user_game_data["summoner2Id"]]}'
 				}
 			}
-			for user_game_data in self.match_info['info']['participants']
-		]
+			clean_summs_stat.append(clean_data)
 		return clean_summs_stat
+
+	def graphs(self):
+		user_stat = {
+			'1': [],
+			'2': [],
+			'3': [],
+			'4': [],
+			'5': [],
+			'6': [],
+			'7': [],
+			'8': [],
+			'9': [],
+			'10': [],
+		}
+		graphs = {
+			'1': {'fight': [], 'farm': []},
+			'2': {'fight': [], 'farm': []},
+			'3': {'fight': [], 'farm': []},
+			'4': {'fight': [], 'farm': []},
+			'5': {'fight': [], 'farm': []},
+			'6': {'fight': [], 'farm': []},
+			'7': {'fight': [], 'farm': []},
+			'8': {'fight': [], 'farm': []},
+			'9': {'fight': [], 'farm': []},
+			'10': {'fight': [], 'farm': []},
+		}
+
+		graphs_meta = {
+			'farm': {'totalGold': 'Gold', 'minions': 'Minions', 'xp': 'Xp', 'level': 'Level'},
+			'fight': {'totalDamageDoneToChampions': 'Damage'}
+		}
+
+		timestamp = []
+		for frames in self.time_line['info']['frames']:
+			timestamp.append(frames['timestamp'] / 60000)
+			frame = frames['participantFrames']
+			for pId in frame:
+				data = frame[pId]
+				data.pop('championStats')
+				data['totalDamageDoneToChampions'] = data['damageStats']['totalDamageDoneToChampions']
+				data.pop('damageStats')
+				user_stat[pId].append(data)
+
+		plt.switch_backend('AGG')
+		for pId in graphs:
+			df = pd.DataFrame(
+				user_stat[pId],
+				columns=[
+					'minionsKilled', 'jungleMinionsKilled',
+					'totalGold', 'level',
+					'xp', 'totalDamageDoneToChampions'],
+				index=timestamp
+			)
+
+			graphs[pId]['champion_name'] = self.summonersDataFrame[self.summonersDataFrame.participantId == int(pId)].iloc[0]['championName']
+
+			df['minions'] = df['minionsKilled'] + df['jungleMinionsKilled']
+			df = df.drop(columns=['minionsKilled', 'jungleMinionsKilled'])
+
+			for t in graphs_meta:
+				for value_type in graphs_meta[t]:
+					df[value_type].plot(xlabel='Time', ylabel=graphs_meta[t][value_type], title=graphs_meta[t][value_type])
+					graphs[pId][t].append(get_graph())
+					plt.close()
+		return graphs
 
 
 class UserAnalytics(RiotAPI):
@@ -85,27 +148,27 @@ class UserAnalytics(RiotAPI):
 		return super().user_stat_on_champ(champ_id, self.id)
 
 # matchs info
-	def match_info_v5(self, game_id):
-		return super().match_info_v5(game_id)
+	def match_info_v5(self, match_id):
+		return super().match_info_v5(match_id)
 
-	def matche_timeline_v5(self, game_id):
-		return super().matche_timeline_v5(game_id)
+	def matche_timeline_v5(self, match_id):
+		return super().matche_timeline_v5(match_id)
 
 	def user_last_games(self):
 		return super().user_last_games(self.puuid)
 
-	def user_stat_in_game(self, game_id):
-		return super().user_stat_in_game(game_id, self.name)
+	def user_stat_in_game(self, match_id):
+		return super().user_stat_in_game(match_id, self.name)
 
-	def short_stat_in_game(self, game_id):
-		user_game_data = super().user_stat_in_game(game_id, self.name)
+	def short_stat_in_game(self, match_id):
+		user_game_data = super().user_stat_in_game(match_id, self.name)
 		clean_data = {
-			'game_id': game_id,
+			'match_id': match_id,
 			'scor': {
 				'kills': user_game_data['kills'],
 				'assists': user_game_data['assists'],
 				'deaths': user_game_data['deaths'],
-				# 'kda': '{0:.2f}'.format((user_game_data["assists"] + user_game_data["kills"]) / user_game_data["deaths"])
+				'kda': round((user_game_data["assists"] + user_game_data["kills"]) / user_game_data["deaths"], 2)
 			},
 			'champ_data': {
 				'champion_name': user_game_data['championName'],
@@ -159,16 +222,16 @@ class UserAnalytics(RiotAPI):
 	async def user_stat_in_game_async(self, game_id):
 		return await super().user_stat_in_game_async(game_id, self.name)
 
-	async def short_stat_in_game_async(self, game_id):
-		user_game_data = await super().user_stat_in_game_async(game_id, self.name)
+	async def short_stat_in_game_async(self, match_id):
+		user_game_data = await super().user_stat_in_game_async(match_id, self.name)
 		clean_data = {
-			'game_id': game_id,
+			'match_id': match_id,
 			'gameStartTimestamp': user_game_data['gameStartTimestamp'],
 			'scor': {
 				'kills': user_game_data['kills'],
 				'assists': user_game_data['assists'],
 				'deaths': user_game_data['deaths'],
-				# 'kda': '{0:.2f}'.format((user_game_data["assists"] + user_game_data["kills"]) / user_game_data["deaths"])
+				'kda': round((user_game_data["assists"] + user_game_data["kills"]) / user_game_data["deaths"], 2)
 			},
 			'champ_data': {
 				'champion_name': user_game_data['championName'],
@@ -195,35 +258,21 @@ class UserAnalytics(RiotAPI):
 		return await super().current_game_async(self.id)
 
 
+def get_graph():
+	buffer = BytesIO()
+	plt.savefig(buffer, format='png')
+	buffer.seek(0)
+	image_png = buffer.getvalue()
+	graph = base64.b64encode(image_png)
+	graph = graph.decode('utf-8')
+	buffer.close()
+	return graph
+
+
 I = 'IIIHeNaIII'
-game_id = 'RU_403490124'
+game_id = 'RU_404441239'
 
 if __name__ == '__main__':
 	client = GameAnalytics('ru', game_id)
-	print(client.summoners_stat())
-	# user_data = {'status_code': 'da',
-	# 			 's_name': I,
-	# 			 'region': 'ru'}
-	# last_games_data = {'games_data': [client.short_stat_in_game(game_id) for game_id in client.user_last_games()]}
-
-	# kills # assists # deaths # champLevel
-	# championName
-	# individualPosition
-	# "item0": 3152,
-	# "item1": 3020,
-	# "item2": 1056,
-	# "item3": 3135,
-	# "item4": 3157,
-	# "item5": 1058,
-	# "item6": 3340,
-	# Item Assets
-	# http://ddragon.leagueoflegends.com/cdn/12.14.1/img/item/1001.png
-	#
-	# champ icon
-	# http: // ddragon.leagueoflegends.com / cdn / 12.14.1 / img / champion / Aatrox.png
-	#
-	# SummonerSpells
-	# http: // ddragon.leagueoflegends.com / cdn / 12.14.1 / img / spell / SummonerFlash.png
-	#
-	# runs
+	client.graphs()
 	# http://ddragon.leagueoflegends.com/cdn/12.14.1/data/en_US/runesReforged.json

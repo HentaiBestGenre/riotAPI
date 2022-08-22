@@ -5,79 +5,157 @@
     <meta charset="UTF-8">
 {#    <link rel="icon" type="image/x-icon" href="{% static 'imgs/icon.ico' %}">#}
     <title>match</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'API/css/bootstrap.css' %}">
     <style>
-        .stat{
+        body{
+            width: 60%;
+            margin: 0 auto;
+        }
+        .stat-container{
             display: grid;
-            grid-template-areas:
-                    "post-1 post-6"
-                    "post-2 post-7"
-                    "post-3 post-8"
-                    "post-4 post-9"
-                    "post-5 post-10";
-            grid-template-columns: 50% 50%;
-            grid-template-rows: 20% 20% 20% 20% 20%;
+            grid-auto-flow: column;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
         }
-        .stat_1{
-            grid-area: post-1;
-        }
-        .stat_2{
-            grid-area: post-2;
-        }
-        .stat_3{
-            grid-area: post-3;
-        }
-        .stat_4{
-            grid-area: post-4;
-        }
-        .stat_5{
-            grid-area: post-5;
-        }
-        .stat_6{
-            grid-area: post-6;
-        }
-        .stat_7{
-            grid-area: post-7;
-        }
-        .stat_8{
-            grid-area: post-8;
-        }
-        .stat_9{
-            grid-area: post-9;
-        }
-        .stat_10{
-            grid-area: post-10;
-        }
-        .box{
+        .player{
             display: flex;
+        }
+        .player div{
+            margin: 0 auto;
+        }
+        .stat{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .items-container{
+            position: relative;
+            padding: 0 !important;
+        }
+        .items{
+            width: 96px;
+            height: 64px;
+            display: grid;
+            grid-auto-flow: row;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            align-items: center;
+            justify-content: center;
+        }
+        .items img{
+            width: 100%;
+        }
+        .hero_icon img{
+            width: 60px;
+            margin: auto 0;
+        }
+        .page img{
+            width: 40px;
+            margin: auto 0;
         }
     </style>
 </head>
 <body>
-<div>{{ match_id }}</div>
-<div class="stat">
+
+<div class="stat-container">
     {% for stat in clean_summs_stat %}
-    <div class="box stat_{{ stat.champ_data.participantId }}">
+    <div class="player">
         <div class="hero_icon">
             <img src="{{ stat.champ_data.champ_icon_url }}" alt="none">
         </div>
         <div class="stat">
-            <p style="font-size: 14px">{{ stat.scor.kills }}/{{ stat.scor.assists }}/{{ stat.scor.deaths }}</p>
+            <p style="font-size: 14px">{{ stat.scor.kills }}/{{ stat.scor.deaths }}/{{ stat.scor.assists }}</p>
             <p style="font-size: 10px">КДА: {{ stat.scor.kda }}</p>
         </div>
-        <div class="items">
-            {% for item in stat.items %}
-                <img src="{{ item }}" onerror="this.style.display='none'">
-            {% endfor %}
+        <div class="items-container">
+            <div class="items">
+                {% for item in stat.items %}
+                    <img src="{{ item }}" onerror="this.style.display='none'" alt="none">
+                {% endfor %}
+            </div>
         </div>
         <div class = 'summoners'>
             <p>{{ stat.summoner_spals.1 }}</p>
             <p>{{ stat.summoner_spals.2 }}</p>
         </div>
-        <div>
-            <p>{{ stat.gameStartTimestamp }}</p>
-        </div>
     </div>
     {% endfor %}
 </div>
+
+
+<div class="w3-bar w3-black">
+{#<p>{{ graphs }}</p>#}
+{% for pID, value in graphs.items %}
+        <button class="w3-bar-item w3-button page" onclick="openParticipant('participant-{{ pID }}')">
+            <img src="http://ddragon.leagueoflegends.com/cdn/12.14.1/img/champion/{{ value.champion_name }}.png">
+        </button>
+{% endfor %}
+</div>
+
+{% for pID, value in graphs.items %}
+    {% if pID == '1' %}
+    <div id='participant-{{ pID }}' class="participant">
+    {% else %}
+    <div id='participant-{{ pID }}' class="participant" style="display: none">
+    {% endif %}
+        <div class="w3-bar w3-black">
+          <button class="w3-bar-item w3-button" onclick="openStat('farm-{{ pID }}')">farm</button>
+          <button class="w3-bar-item w3-button" onclick="openStat('fight-{{ pID }}')">fight</button>
+        </div>
+        <div id="farm-{{ pID }}"  class="graph">
+            {% for g in value.farm %}
+            <div>
+                <img src="data:image/png;base64, {{ g|safe }}">
+            </div>
+            {% endfor %}
+        </div>
+        <div id="fight-{{ pID }}" class="graph" style="display: none">
+            {% for g in value.fight %}
+            <div class="">
+                <img src="data:image/png;base64, {{ g|safe }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endfor %}
+
+
+{#<div id="farm"  class="graph">#}
+{#    {% for g in graphs.farm %}#}
+{#        <div>#}
+{#            <img src="data:image/png;base64, {{ g|safe }}">#}
+{#        </div>#}
+{#    {% endfor %}#}
+{#</div>#}
+{#<div id="fight" class="graph" style="display: none">#}
+{#    {% for g in graphs.fight %}#}
+{#        <div class="">#}
+{#            <img src="data:image/png;base64, {{ g|safe }}">#}
+{#        </div>#}
+{#    {% endfor %}#}
+{#</div>#}
+
+<script>
+function openParticipant(participant) {
+  var i;
+  var x = document.getElementsByClassName("participant");
+  for (i = 0; i < x.length; i++) {
+    x[i].style.display = "none";
+  }
+  document.getElementById(participant).style.display = "block";
+}
+</script>
+
+<script>
+function openStat(Stat) {
+  var i;
+  var x = document.getElementsByClassName("graph");
+  for (i = 0; i < x.length; i++) {
+    x[i].style.display = "none";
+  }
+  document.getElementById(Stat).style.display = "block";
+}
+</script>
+
 </body>
 </html>

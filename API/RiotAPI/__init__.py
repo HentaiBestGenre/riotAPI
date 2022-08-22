@@ -1,4 +1,3 @@
-import asyncio
 import httpx
 import requests
 from .RiotConfig import config
@@ -23,6 +22,7 @@ class RiotAPI(object):
 		12: 'Teleport',
 		13: '13',
 		14: 'Ignite',
+		21: 'Barrier'
 	}
 	languages = {
 		'eun1': 'en_US',

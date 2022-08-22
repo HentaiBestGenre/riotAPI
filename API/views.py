@@ -6,41 +6,33 @@ import json, time
 
 
 def index(request):
-    import pdb; pdb.set_trace()
-    print('request.method: ', request.method)
     if request.method == 'POST':
-        print('request.POST[region]: ', request.POST['region'])
-        print('request.POST[summoner_name]: ', request.POST['summoner_name'])
         return redirect('API:summoner', region=request.POST['region'], s_name=request.POST['summoner_name'])
-    import pdb; pdb.set_trace()
     return render(request, 'API/index.html', {})
 
 
 async def summoner(request, region, s_name):
     s = time.time()
-    queue = asyncio.Queue()
     client = UserAnalytics(s_name, region)
     user_data = {'status_code': 'da',
                  's_name': s_name,
                  'region': region}
     rank = user_rank_stat(client.user_rank())
     task_list = [asyncio.create_task(client.short_stat_in_game_async(game_id)) for game_id in client.user_last_games()]
-    import pdb; pdb.set_trace()
-    await queue.join()
-    last_games_data = {'games_data': await asyncio.gather(*task_list, return_exceptions=False)}
-    import pdb; pdb.set_trace()
+    last_games_data = list(await asyncio.gather(*task_list, return_exceptions=True))
     print(time.time() - s)
     return render(request, 'API/summoner_page.html', {'user_data': user_data, 'rank': rank, 'games_data': last_games_data})
 
 
 def match(request, match_id):
     s = time.time()
-    import pdb; pdb.set_trace()
     client = GameAnalytics(match_id.split('_')[0].lower(), match_id)
     clean_summs_stat = client.summoners_stat()
-    import pdb; pdb.set_trace()
+    graphs = client.graphs()
     print(time.time() - s)
-    return render(request, 'API/match.html', {'clean_summs_stat': clean_summs_stat})
+    # , 'graphs': graphs
+    game_gen_data = {}
+    return render(request, 'API/match.html', {'game_gen_data': game_gen_data, 'clean_summs_stat': clean_summs_stat, 'graphs': graphs})
 
 
 def user_rank_stat(rank_info):
